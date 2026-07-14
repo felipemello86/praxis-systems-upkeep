@@ -1,0 +1,214 @@
+// ============================================================================
+// MAINTENANCE — schema relacional do Hotel Maintenance Compliance System
+// ============================================================================
+// Este é o app unificado (Next.js, mesma base do housekeeping/booking-reviews)
+// que substitui o par antigo maintenance-frontend (V0, Better Auth + Drizzle)
+// + maintenance-backend (Express, Render). Mesmo schema validado ali, só
+// com `passwordHash` adicionado em MaintenanceUser pra suportar login via
+// NextAuth (o sistema antigo não tinha login por usuário, só um token de
+// acesso por tenant — ver docs/ARCHITECTURE.md do app antigo).
+//
+// Roda no MESMO Postgres do suite_core (schema Postgres "maintenance",
+// separado do schema "suite_core" — ver packages/suite-core).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["maintenance"]
+}
+
+enum MaintenancePlan {
+  ESSENTIAL
+  PROFESSIONAL
+  PREMIUM
+
+  @@schema("maintenance")
+}
+
+enum MaintenanceUserRole {
+  MASTER
+  PADRAO
+
+  @@schema("maintenance")
+}
+
+enum InspectionItemStatus {
+  CONFORME
+  NAO_CONFORME
+
+  @@schema("maintenance")
+}
+
+// ---------------------------------------------------------------------------
+// MaintenanceAccount — um cliente (tenant) do módulo de Manutenção.
+// `tenantId` é o `Tenant.id` do suite_core — vínculo lógico (sem FK
+// cross-schema), garantido em código (ver src/lib/tenantContext.ts).
+// ---------------------------------------------------------------------------
+model MaintenanceAccount {
+  id       String @id @default(cuid())
+  tenantId String @unique // = suite_core.Tenant.id
+
+  propertyName String
+  adminName    String?
+  adminEmail   String
+  adminPhone   String?
+  plan         MaintenancePlan @default(PROFESSIONAL)
+
+  stripeSessionId      String?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+
+  onboardingComplete        Boolean @default(false)
+  maxDaysBetweenInspections Int     @default(7)
+  goal                      Int?
+  currentUserId             String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  units            Unit[]
+  checklistItems   ChecklistItem[]
+  inspections      Inspection[]
+  users            MaintenanceUser[]
+  whatsappSettings WhatsappSettings?
+
+  @@schema("maintenance")
+}
+
+model Unit {
+  id        String             @id @default(cuid())
+  accountId String
+  account   MaintenanceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  name    String
+  itemIds Int[]
+
+  createdAt DateTime @default(now())
+
+  inspections Inspection[]
+
+  @@index([accountId])
+  @@schema("maintenance")
+}
+
+model ChecklistItem {
+  id        String             @id @default(cuid())
+  accountId String
+  account   MaintenanceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  legacyId       Int
+  name           String
+  category       String
+  subDescription String?
+
+  @@unique([accountId, legacyId])
+  @@schema("maintenance")
+}
+
+// ---------------------------------------------------------------------------
+// MaintenanceUser — agora com login próprio (email + senha), igual
+// housekeeping/booking-reviews. MASTER tem acesso total; PADRAO é o
+// equivalente a "governanta"/operador do dia a dia.
+// ---------------------------------------------------------------------------
+model MaintenanceUser {
+  id        String             @id @default(cuid())
+  accountId String
+  account   MaintenanceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  name         String
+  email        String
+  passwordHash String?
+  role         MaintenanceUserRole @default(PADRAO)
+  ativo        Boolean             @default(true)
+
+  createdAt DateTime @default(now())
+
+  inspections        Inspection[]
+  whatsappRecipients WhatsappRecipient[]
+
+  @@unique([accountId, email])
+  @@index([accountId])
+  @@schema("maintenance")
+}
+
+model Inspection {
+  id        String             @id @default(cuid())
+  accountId String
+  account   MaintenanceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  inspectorId String?
+  inspector   MaintenanceUser? @relation(fields: [inspectorId], references: [id])
+
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  items InspectionItem[]
+
+  @@index([accountId])
+  @@index([unitId, date])
+  @@schema("maintenance")
+}
+
+model InspectionItem {
+  id           String     @id @default(cuid())
+  inspectionId String
+  inspection   Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  itemLegacyId Int
+  status       InspectionItemStatus
+  comment      String?
+  photos       String[]
+  correctedAt  DateTime?
+
+  logHistory InspectionItemLogEntry[]
+
+  @@index([inspectionId])
+  @@schema("maintenance")
+}
+
+model InspectionItemLogEntry {
+  id               String         @id @default(cuid())
+  inspectionItemId String
+  inspectionItem   InspectionItem @relation(fields: [inspectionItemId], references: [id], onDelete: Cascade)
+
+  date DateTime
+  note String
+
+  @@schema("maintenance")
+}
+
+model WhatsappSettings {
+  id        String             @id @default(cuid())
+  accountId String             @unique
+  account   MaintenanceAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  enabled   Boolean @default(false)
+  schedDays Int[]
+  schedTime String  @default("08:00")
+
+  recipients WhatsappRecipient[]
+
+  @@schema("maintenance")
+}
+
+model WhatsappRecipient {
+  id                 String           @id @default(cuid())
+  whatsappSettingsId String
+  whatsappSettings   WhatsappSettings @relation(fields: [whatsappSettingsId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   MaintenanceUser? @relation(fields: [userId], references: [id])
+
+  phone  String
+  active Boolean @default(true)
+
+  @@schema("maintenance")
+}
