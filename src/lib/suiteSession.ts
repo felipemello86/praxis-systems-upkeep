@@ -15,7 +15,7 @@
  */
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import type { SuiteModule } from "../../prisma/suite-core/generated";
+import type { SuiteModule } from "../../generated/suite-core";
 
 const secret = new TextEncoder().encode(
   process.env.SUITE_SESSION_SECRET || "dev-secret-change-in-production"
