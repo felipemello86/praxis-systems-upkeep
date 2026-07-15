@@ -67,11 +67,25 @@ export async function GET(req: NextRequest) {
   // antes da migração (mesma causa raiz do bug "0 UHs" no housekeeping).
   // Resolve pelo email (case-insensitive: migrate-users.mjs grava sempre
   // lowercase em suite_core) e usa o id LOCAL no token.
-  const localUser = await prisma.maintenanceUser.findFirst({
+  let localUser = await prisma.maintenanceUser.findFirst({
     where: { accountId: account.id, email: { equals: suiteSession.email, mode: "insensitive" } },
   });
+
+  // Auto-heal: cobre quem ganhou acesso a MAINTENANCE pelo painel de outro
+  // módulo (ver UsuariosTab do housekeeping) e nunca teve um MaintenanceUser
+  // local — sem isso, a pessoa fica travada mesmo com o módulo liberado.
+  // Mesmo padrão já usado no booking-reviews (auto-cria/atualiza o espelho
+  // local no login silencioso).
   if (!localUser) {
-    return NextResponse.redirect(signInUrl);
+    localUser = await prisma.maintenanceUser.create({
+      data: {
+        accountId: account.id,
+        name: suiteSession.nome,
+        email: suiteSession.email,
+        passwordHash: null,
+        role: suiteSession.role === "MASTER" ? "MASTER" : "PADRAO",
+      },
+    });
   }
 
   // Mesmo formato que o callback `jwt()` de src/lib/auth.ts produz.
