@@ -36,10 +36,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(signInUrl);
   }
 
+  // Ponte de identidade: dados operacionais (Inspection, WhatsappRecipient
+  // etc.) referenciam o id LOCAL de MaintenanceUser (cuid antigo), não o id
+  // do suite_core.User (uuid novo, gerado do zero em scripts/migrate-users.mjs
+  // via gen_random_uuid() — não preserva o id local). Usar suiteSession.userId
+  // direto como `sub` quebra qualquer filtro por userId pra quem já existia
+  // antes da migração (mesma causa raiz do bug "0 UHs" no housekeeping).
+  // Resolve pelo email (case-insensitive: migrate-users.mjs grava sempre
+  // lowercase em suite_core) e usa o id LOCAL no token.
+  const localUser = await prisma.maintenanceUser.findFirst({
+    where: { accountId: account.id, email: { equals: suiteSession.email, mode: "insensitive" } },
+  });
+  if (!localUser) {
+    return NextResponse.redirect(signInUrl);
+  }
+
   // Mesmo formato que o callback `jwt()` de src/lib/auth.ts produz.
   const token = await encode({
     token: {
-      sub: suiteSession.userId,
+      sub: localUser.id,
       name: suiteSession.nome,
       email: suiteSession.email,
       role: suiteSession.role,
