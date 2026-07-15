@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import {
@@ -13,12 +13,12 @@ import {
   LogOut,
   Menu,
   X,
-  LayoutGrid,
+  Home,
 } from 'lucide-react'
 
-// URL do hub de módulos (gateway) — só usada dentro do app nativo, pra
-// alternar entre Governança/Upkeep/Reviews. <a> pura (não <Link>) porque é
-// um app Next.js diferente por trás do gateway.
+// URL do hub de módulos (gateway) — pra voltar pra tela de escolher o
+// módulo (Governança/Upkeep/Reviews) a partir de qualquer tela. <a> pura
+// (não <Link>) porque é um app Next.js diferente por trás do gateway.
 const HUB_URL = 'https://praxis-systems.com.br/bnbflex'
 import { cn } from '@/lib/utils'
 import {
@@ -61,12 +61,7 @@ export function Dashboard({
 }) {
   const [view, setView] = useState<ViewId>('gerencial')
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [isNativeApp, setIsNativeApp] = useState(false)
   const router = useRouter()
-
-  useEffect(() => {
-    setIsNativeApp(!!(window as any).Capacitor?.isNativePlatform?.())
-  }, [])
 
   const iniciais = user.name
     .split(' ')
@@ -129,15 +124,13 @@ export function Dashboard({
         </nav>
 
         <div className="border-t border-border/70 p-3">
-          {isNativeApp && (
-            <a
-              href={HUB_URL}
-              className="mb-1 flex w-full items-center gap-3 rounded-xl px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            >
-              <LayoutGrid className="h-[18px] w-[18px] shrink-0" />
-              Trocar módulo
-            </a>
-          )}
+          <a
+            href={HUB_URL}
+            className="mb-1 flex w-full items-center gap-3 rounded-xl px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <Home className="h-[18px] w-[18px] shrink-0" />
+            Home
+          </a>
           <div className="flex items-center gap-3 rounded-xl px-2 py-2">
             <Avatar className="h-9 w-9">
               <AvatarFallback className="bg-accent text-xs font-semibold text-foreground">
@@ -180,11 +173,19 @@ export function Dashboard({
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-lg font-semibold tracking-tight">
               {NAV.find((n) => n.id === view)?.label}
             </h1>
           </div>
+          <a
+            href={HUB_URL}
+            aria-label="Home"
+            title="Home"
+            className="rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <Home className="h-5 w-5" />
+          </a>
         </header>
 
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
