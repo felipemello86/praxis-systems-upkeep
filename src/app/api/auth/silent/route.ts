@@ -9,9 +9,15 @@ import { prisma } from "@/lib/prisma";
  * módulo (MAINTENANCE), estabelece a sessão NextAuth deste app sem pedir
  * senha de novo. Se não, manda pro /sign-in normal.
  */
+// URL do hub de módulos (gateway) — login agora só acontece lá (ver
+// apps/gateway/src/app/[cliente]/page.tsx). Este app não tem mais tela de
+// login própria usável: se não tem sessão compartilhada válida, manda pro
+// hub em vez de um /sign-in local.
+const HUB_URL = "https://praxis-systems.com.br/bnbflex";
+
 export async function GET(req: NextRequest) {
   const next = req.nextUrl.searchParams.get("next") || "/";
-  const signInUrl = new URL("/sign-in", req.url);
+  const signInUrl = HUB_URL;
 
   const suiteSession = await getSuiteSession();
   if (!suiteSession || !suiteSession.modules.includes("MAINTENANCE")) {

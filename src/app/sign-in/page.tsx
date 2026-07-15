@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { AuthForm } from "@/components/auth-form";
 
-export default async function SignInPage() {
-  const session = await getServerSession(authOptions);
-  if (session?.user) redirect("/");
-  return <AuthForm />;
+// Login centralizado: a única forma de entrar na suíte é pelo hub
+// (gateway). Esta tela não existe mais como formulário — só redireciona
+// pra lá. Mantida como rota (em vez de removida) pra qualquer link/bookmark
+// antigo apontando pra /sign-in continuar funcionando, só que agora
+// mandando pro lugar certo.
+const HUB_URL = "https://praxis-systems.com.br/bnbflex";
+
+export default function SignInPage() {
+  redirect(HUB_URL);
 }
