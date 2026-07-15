@@ -25,29 +25,6 @@ const BASE_PATH = "/upkeep";
 export async function GET(req: NextRequest) {
   const next = req.nextUrl.searchParams.get("next") || "/";
   const signInUrl = HUB_URL;
-  const debug = req.nextUrl.searchParams.get("debug") === "1";
-
-  // Diagnóstico temporário — mesmo padrão usado em housekeeping/booking-reviews
-  // pra achar a causa exata do bounce pro hub. Remover depois de confirmar.
-  if (debug) {
-    const suiteSession = await getSuiteSession();
-    if (!suiteSession) {
-      return NextResponse.json({ etapa: "cookie", resultado: "AUSENTE ou inválido" });
-    }
-    if (!suiteSession.modules.includes("MAINTENANCE")) {
-      return NextResponse.json({ etapa: "acesso ao módulo", resultado: "sessão válida mas sem MAINTENANCE em modules", modules: suiteSession.modules, userId: suiteSession.userId, nome: suiteSession.nome, email: suiteSession.email });
-    }
-    const account = await prisma.maintenanceAccount.findUnique({ where: { tenantId: suiteSession.tenantId } });
-    if (!account) {
-      return NextResponse.json({ etapa: "account", resultado: "sessão válida com acesso a MAINTENANCE, mas nenhuma MaintenanceAccount encontrada pra esse tenantId", tenantId: suiteSession.tenantId });
-    }
-    const localUser = await prisma.maintenanceUser.findFirst({ where: { accountId: account.id, email: { equals: suiteSession.email, mode: "insensitive" } } });
-    if (!localUser) {
-      const todosUsuarios = await prisma.maintenanceUser.findMany({ where: { accountId: account.id }, select: { email: true, name: true } });
-      return NextResponse.json({ etapa: "localUser", resultado: "account encontrada, mas nenhum MaintenanceUser local com esse email", emailProcurado: suiteSession.email, usuariosLocaisNestaConta: todosUsuarios });
-    }
-    return NextResponse.json({ etapa: "tudo ok", resultado: "deveria ter logado normalmente", localUserId: localUser.id });
-  }
 
   const suiteSession = await getSuiteSession();
   if (!suiteSession || !suiteSession.modules.includes("MAINTENANCE")) {
