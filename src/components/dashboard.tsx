@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import {
@@ -62,6 +62,14 @@ export function Dashboard({
   const [view, setView] = useState<ViewId>('gerencial')
   const [mobileOpen, setMobileOpen] = useState(false)
   const router = useRouter()
+
+  // Emite/renova o cookie de sessão compartilhado (SSO) uma vez por sessão
+  // do navegador — ver comentário igual em apps/housekeeping/Sidebar.tsx.
+  // Sem isso, quem já estava logado antes do SSO existir nunca dispara a
+  // emissão (só acontecia no POST de login).
+  useEffect(() => {
+    fetch('/api/auth/suite-session/issue', { method: 'POST' }).catch(() => {})
+  }, [])
 
   const iniciais = user.name
     .split(' ')
