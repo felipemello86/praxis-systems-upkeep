@@ -76,6 +76,7 @@ export function Dashboard({
     .toUpperCase()
 
   async function handleSignOut() {
+    await fetch('/api/auth/suite-session/clear', { method: 'POST' })
     await signOut({ redirect: false })
     router.push('/sign-in')
     router.refresh()

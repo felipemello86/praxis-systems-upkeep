@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
+import { suitePrisma } from "./suitePrisma";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -16,24 +17,35 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await prisma.maintenanceUser.findFirst({
+        // Cadastro único (suite_core) — não é mais a tabela local
+        // `MaintenanceUser`. Ver src/lib/suitePrisma.ts.
+        const suiteUser = await suitePrisma.user.findFirst({
           where: { email: credentials.email, ativo: true },
-          include: { account: true },
         });
+        if (!suiteUser || !suiteUser.passwordHash) return null;
 
-        if (!user || !user.passwordHash) return null;
-
-        const valid = await bcrypt.compare(credentials.password, user.passwordHash);
+        const valid = await bcrypt.compare(credentials.password, suiteUser.passwordHash);
         if (!valid) return null;
 
+        const access = await suitePrisma.userModuleAccess.findUnique({
+          where: { userId_module: { userId: suiteUser.id, module: "MAINTENANCE" } },
+        });
+        if (!access?.enabled) return null;
+
+        // Bridge pra MaintenanceAccount local (já tinha tenantId).
+        const account = await prisma.maintenanceAccount.findUnique({
+          where: { tenantId: suiteUser.tenantId },
+        });
+        if (!account) return null;
+
         return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          accountId: user.accountId,
-          tenantId: user.account.tenantId,
-          propertyName: user.account.propertyName,
+          id: suiteUser.id,
+          name: suiteUser.nome,
+          email: suiteUser.email,
+          role: suiteUser.role,
+          accountId: account.id,
+          tenantId: suiteUser.tenantId,
+          propertyName: account.propertyName,
         };
       },
     }),

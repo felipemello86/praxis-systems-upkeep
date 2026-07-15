@@ -29,6 +29,10 @@ export function AuthForm() {
       return;
     }
 
+    // Emite, junto, o cookie de sessão compartilhado entre os 3 módulos —
+    // é o que permite entrar em Governança/Reviews sem digitar senha de novo.
+    await fetch("/api/auth/suite-session/issue", { method: "POST" });
+
     router.push("/");
     router.refresh();
   };

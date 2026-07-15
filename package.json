@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && prisma generate --schema=prisma/suite-core/schema.prisma && next build",
     "start": "next start",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push"
+    "db:generate": "prisma generate && prisma generate --schema=prisma/suite-core/schema.prisma",
+    "db:push": "prisma db push",
+    "suite-core:push": "prisma db push --schema=prisma/suite-core/schema.prisma"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
