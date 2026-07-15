@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import {
@@ -13,7 +13,13 @@ import {
   LogOut,
   Menu,
   X,
+  LayoutGrid,
 } from 'lucide-react'
+
+// URL do hub de módulos (gateway) — só usada dentro do app nativo, pra
+// alternar entre Governança/Upkeep/Reviews. <a> pura (não <Link>) porque é
+// um app Next.js diferente por trás do gateway.
+const HUB_URL = 'https://praxis-systems.com.br/bnbflex'
 import { cn } from '@/lib/utils'
 import {
   Avatar,
@@ -55,7 +61,12 @@ export function Dashboard({
 }) {
   const [view, setView] = useState<ViewId>('gerencial')
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [isNativeApp, setIsNativeApp] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    setIsNativeApp(!!(window as any).Capacitor?.isNativePlatform?.())
+  }, [])
 
   const iniciais = user.name
     .split(' ')
@@ -117,6 +128,15 @@ export function Dashboard({
         </nav>
 
         <div className="border-t border-border/70 p-3">
+          {isNativeApp && (
+            <a
+              href={HUB_URL}
+              className="mb-1 flex w-full items-center gap-3 rounded-xl px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <LayoutGrid className="h-[18px] w-[18px] shrink-0" />
+              Trocar módulo
+            </a>
+          )}
           <div className="flex items-center gap-3 rounded-xl px-2 py-2">
             <Avatar className="h-9 w-9">
               <AvatarFallback className="bg-accent text-xs font-semibold text-foreground">
