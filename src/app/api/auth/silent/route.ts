@@ -15,6 +15,13 @@ import { prisma } from "@/lib/prisma";
 // hub em vez de um /sign-in local.
 const HUB_URL = "https://praxis-systems.com.br/bnbflex";
 
+// Precisa bater com `basePath` de next.config.js. `new URL(next, req.url)`
+// SUBSTITUI o path inteiro (não concatena) quando `next` começa com "/" —
+// isso apaga o prefixo /upkeep da URL final e manda pro domínio errado
+// (404 no gateway, que não tem rota solta nesse caminho). Por isso o
+// redirect de sucesso abaixo precisa prefixar manualmente.
+const BASE_PATH = "/upkeep";
+
 export async function GET(req: NextRequest) {
   const next = req.nextUrl.searchParams.get("next") || "/";
   const signInUrl = HUB_URL;
@@ -47,7 +54,7 @@ export async function GET(req: NextRequest) {
   const useSecureCookies = process.env.NODE_ENV === "production";
   const cookieName = `${useSecureCookies ? "__Secure-" : ""}next-auth.session-token`;
 
-  const res = NextResponse.redirect(new URL(next, req.url));
+  const res = NextResponse.redirect(new URL(`${BASE_PATH}${next}`, req.url));
   res.cookies.set(cookieName, token, {
     httpOnly: true,
     sameSite: "lax",
