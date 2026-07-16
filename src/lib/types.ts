@@ -21,6 +21,7 @@ export type DashboardUser = {
   email: string;
   role?: string;
   propertyName?: string;
+  tenantSlug?: string;
 };
 
 export type ViewId =

@@ -12,8 +12,18 @@ import { prisma } from "@/lib/prisma";
 // URL do hub de módulos (gateway) — login agora só acontece lá (ver
 // apps/gateway/src/app/[cliente]/page.tsx). Este app não tem mais tela de
 // login própria usável: se não tem sessão compartilhada válida, manda pro
-// hub em vez de um /sign-in local.
-const HUB_URL = "https://praxis-systems.com.br/bnbflex";
+// hub em vez de um /sign-in local. SEM cookie válido ainda não sabemos de
+// qual cliente/tenant é essa pessoa (múltiplos clientes, cada um em
+// praxis-systems.com.br/<slug> — ver visão de produto), então cai na raiz
+// genérica do domínio, não mais fixo num tenant específico.
+const HUB_URL_GENERICO = "https://praxis-systems.com.br/";
+
+// Cookies emitidos antes deste campo existir não têm tenantSlug ainda (só
+// tenantId) — cai na raiz genérica em vez de gerar ".../undefined" até a
+// pessoa logar de novo (o que já reemite o cookie completo).
+function tenantHubUrl(suiteSession: { tenantSlug?: string }) {
+  return suiteSession.tenantSlug ? `https://praxis-systems.com.br/${suiteSession.tenantSlug}` : HUB_URL_GENERICO;
+}
 
 // Precisa bater com `basePath` de next.config.js. `new URL(next, req.url)`
 // SUBSTITUI o path inteiro (não concatena) quando `next` começa com "/" —
@@ -24,16 +34,19 @@ const BASE_PATH = "/upkeep";
 
 export async function GET(req: NextRequest) {
   const next = req.nextUrl.searchParams.get("next") || "/";
-  const signInUrl = HUB_URL;
 
   const suiteSession = await getSuiteSession();
-  if (!suiteSession || !suiteSession.modules.includes("MAINTENANCE")) {
-    return NextResponse.redirect(signInUrl);
+  if (!suiteSession) {
+    return NextResponse.redirect(HUB_URL_GENERICO);
+  }
+  if (!suiteSession.modules.includes("MAINTENANCE")) {
+    // Sessão válida, só sem esse módulo — manda pro hub DESSE tenant.
+    return NextResponse.redirect(tenantHubUrl(suiteSession));
   }
 
   const account = await prisma.maintenanceAccount.findUnique({ where: { tenantId: suiteSession.tenantId } });
   if (!account) {
-    return NextResponse.redirect(signInUrl);
+    return NextResponse.redirect(tenantHubUrl(suiteSession));
   }
 
   // Ponte de identidade: dados operacionais (Inspection, WhatsappRecipient
@@ -74,6 +87,7 @@ export async function GET(req: NextRequest) {
       role: suiteSession.role,
       accountId: account.id,
       tenantId: suiteSession.tenantId,
+      tenantSlug: suiteSession.tenantSlug,
       propertyName: account.propertyName,
     },
     secret: process.env.NEXTAUTH_SECRET!,

@@ -19,7 +19,11 @@ import {
 // URL do hub de módulos (gateway) — pra voltar pra tela de escolher o
 // módulo (Governança/Upkeep/Reviews) a partir de qualquer tela. <a> pura
 // (não <Link>) porque é um app Next.js diferente por trás do gateway.
-const HUB_URL = 'https://praxis-systems.com.br/bnbflex'
+// Dinâmico por tenant — cada cliente da Praxis mora em
+// praxis-systems.com.br/<slug próprio>, não só "bnbflex".
+function hubUrl(tenantSlug?: string) {
+  return tenantSlug ? `https://praxis-systems.com.br/${tenantSlug}` : 'https://praxis-systems.com.br/'
+}
 import { cn } from '@/lib/utils'
 import {
   Avatar,
@@ -133,7 +137,7 @@ export function Dashboard({
 
         <div className="border-t border-border/70 p-3">
           <a
-            href={HUB_URL}
+            href={hubUrl(user.tenantSlug)}
             className="mb-1 flex w-full items-center gap-3 rounded-xl px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <Home className="h-[18px] w-[18px] shrink-0" />
@@ -187,7 +191,7 @@ export function Dashboard({
             </h1>
           </div>
           <a
-            href={HUB_URL}
+            href={hubUrl(user.tenantSlug)}
             aria-label="Home"
             title="Home"
             className="rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground"

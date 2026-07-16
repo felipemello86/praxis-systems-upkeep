@@ -44,6 +44,7 @@ export async function POST() {
   await setSuiteSessionCookie({
     userId: suiteUser.id,
     tenantId: user.tenantId,
+    tenantSlug: user.tenantSlug,
     nome: user.name,
     email: user.email,
     role: user.role,

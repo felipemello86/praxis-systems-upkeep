@@ -18,7 +18,7 @@ export default async function Home() {
 
   return (
     <Dashboard
-      user={{ name: user.name, email: user.email, role: user.role, propertyName: user.propertyName }}
+      user={{ name: user.name, email: user.email, role: user.role, propertyName: user.propertyName, tenantSlug: user.tenantSlug }}
       unidades={unidades}
       itens={itens}
       inspecoes={inspecoes}

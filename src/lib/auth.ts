@@ -38,6 +38,8 @@ export const authOptions: NextAuthOptions = {
         });
         if (!account) return null;
 
+        const tenant = await suitePrisma.tenant.findUnique({ where: { id: suiteUser.tenantId } });
+
         return {
           id: suiteUser.id,
           name: suiteUser.nome,
@@ -45,6 +47,7 @@ export const authOptions: NextAuthOptions = {
           role: suiteUser.role,
           accountId: account.id,
           tenantId: suiteUser.tenantId,
+          tenantSlug: tenant?.slug ?? null,
           propertyName: account.propertyName,
         };
       },
@@ -56,6 +59,7 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role;
         token.accountId = (user as any).accountId;
         token.tenantId = (user as any).tenantId;
+        token.tenantSlug = (user as any).tenantSlug;
         token.propertyName = (user as any).propertyName;
       }
       return token;
@@ -66,6 +70,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).role = token.role;
         (session.user as any).accountId = token.accountId;
         (session.user as any).tenantId = token.tenantId;
+        (session.user as any).tenantSlug = token.tenantSlug;
         (session.user as any).propertyName = token.propertyName;
       }
       return session;
